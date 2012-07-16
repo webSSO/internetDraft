@@ -1,0 +1,820 @@
+<?xml version="1.0"?>
+<!DOCTYPE rfc SYSTEM "rfc2629.dtd">
+<rfc category="std" ipr="full3978">
+  <?rfc toc="yes" ?>
+  <?rfc symrefs="yes" ?>
+  <?rfc sortrefs="yes"?>
+  <?rfc iprnotified="no" ?>
+
+  <front>
+    <title>Web Single Sign-On (webSSO)</title>
+
+    <author initials="N.P." surname="McCallum" fullname="Nathaniel P. McCallum">
+      <organization>Red Hat, Inc.</organization>
+      <address>
+        <postal>
+          <street>1801 Varsity Drive</street>
+          <city>Raleigh</city>
+          <region>NC</region>
+          <code>27606</code>
+          <country>US</country>
+        </postal>
+        
+        <phone>+1 404 842 5022</phone>
+        <email>npmccallum@redhat.com</email>
+        <uri>http://www.redhat.com/</uri>
+      </address>
+    </author>
+
+    <date month="May" year="2012" />
+
+    <area>Security</area>
+    <keyword>I-D</keyword>
+    <keyword>Internet-Draft</keyword>
+    <keyword>TLS</keyword>
+    <keyword>Certificate</keyword>
+    <abstract>
+      <t>webSSO is an application-level protocol for decentralized, federated
+      authentication at the presentation-level. It provides an automated,
+      stateless technique for obtaining X.509 Client Certificates based upon a
+      user's authentication credentials.</t>
+    </abstract>
+  </front>
+  <middle>
+    <section anchor="introduction" title="Introduction">
+      <section anchor="purpose" title="Purpose">
+        <t>webSSO is an application-level protocol for decentralized, federated
+           authentication at the presentation-level. It provides an automated,
+           stateless technique for obtaining X.509 Client Certificates based
+           upon a user's authentication credentials.</t>
+      
+        <t>webSSO intends to decouple authentication from authorization and to
+           permit inter-organizational trust of user credentials. It is designed
+           to deploy on existing TLS enabled protocol stacks, particularly
+           HTTPS, using pre-existing trust relationships. In particular, all
+           communication occurs using the client as a proxy, enabling trust
+           relationships across discreet, disconnected networks.</t>
+      </section>
+      <section anchor="requirements" title="Requirements">
+        <t>The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+           "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+           "OPTIONAL" in this document are to be interpreted as described in
+           <xref target="RFC2119"/>.</t>
+      </section>
+      <section anchor="terminology" title="Terminology">
+        <t>
+        <list style="hanging">
+          <t hangText="Protected Resource:">The server side of any TLS
+             encrypted connection which sends a client certificate message. See
+             <xref target="RFC5246"/>.</t>
+          <t hangText="Authentication Service (AS):">An HTTP
+             (<xref target="RFC2119"/>) service which issues X.509 client
+             certificates.</t>
+          <t hangText="Authentication Service URL (ASURL):">The Uniform
+             Resource Locator where the Authentication Service can be found.</t>
+          <t hangText="Authentication Certificate (AC):">An X.509 client
+             certificate issued by the Authentication Service.</t>
+          <t hangText="Authentication Certificate Granting Certificate (ACGC):">
+             An Authentication Certificate issued by the Authentication Service
+             for itself. It is used to obtain further Authentication
+             Certificates for other services without re-entering the user's
+             credentials.</t>
+          <t hangText="Authentication Certification Request (ACR):">
+             A PKCS #10 Certification Request message <xref target="RFC2986"/>
+             which is POSTed to the ASURL in order to obtain an AC.</t>
+          <t hangText="Delegate Authentication Certification Request (DACR):">
+             An ACR wrapped in a PKCS #7 signature <xref target="RFC5652"/> and
+             signed by the delegate requesting access.</t>
+        </list>
+        </t>
+      </section>
+      <section anchor="overview" title="Overview">
+        <t>webSSO does not provide authentication directly, but rather is a
+           policy layer on top of the existing TLS client certificate
+           authentication (<xref target="RFC5246"/>) and/or HTTP authentication
+           (<xref target="RFC2616"/>). Without using webSSO, when a Protected
+           Resource requests an X.509 client certificate, obtaining this
+           certificate can be an error-prone manual process. This typically
+           leads to the issuance of medium- to long-term client certificates.
+           By contrast, when using webSSO, an X.509 client certificate can be
+           obtained dynamically, allowing the conveninece and lower-risk of
+           short-term certificates, called Authentication Certificates (AC).</t>
+           
+        <t>The core of webSSO is the Authentication Service (AS). An AS is an
+           HTTP service which issues client certificates and, optionally,
+           provides a standard mechanism for revoking issued certificates. The
+           AS is itself a Protected Resource (PR), allowing the use of an ACGC
+           to obtain new ACs without re-entering credentials.</t>
+           
+        <t>Additionally, the client the defined client behavior permits the
+           seamless location and use of the AS to dynamically allocate
+           certificates for authentication. Thus, when a client encounters a
+           PR that it does not have a valid certificate for, it will locate and
+           use an AS to generate an AC for the PR using an ACGC. If the client
+           does not have an ACGC for this AS, it will request one from the AS,
+           authenticating as necessary. Once a client has an ACGC for the AS,
+           it will use the ACGC to request an AC for the PR. Once the client
+           possesses a proper AC, it can reauthenticate to the PR without
+           further contacting the AS until the AC expires or is revoked.</t>
+      </section>
+    </section>
+    
+    <section anchor="formatting" title="Formatting">
+      <section anchor="distinguishednames" title="Distinguished Names">
+        <section anchor="webssoas" title="webSSOAS Attribute">
+          <t>The webSSOAS attribute is a Subject/Issuer attribute with the OID
+             TBD. It is a UTF8String which contains an ASURL. A Subject or
+             Issuer field MUST NOT contain more than one webSSOAS attribute.</t>
+             
+          <t>Any certificate used to sign AC's by an AS MUST contain the
+             webSSOAS attribute in its Subject field.</t>
+        </section>
+
+        <section anchor="reqattr" title="Required Attributes">
+          <t>In either an AC or an ACR, a Subject MUST contain exactly one UID
+             attribute and one or more DC attributes as defined in
+             <xref target="RFC4514"/> and <xref target="RFC4519"/>. Further,
+             the content of these attributes MUST be able to be expressed in
+             the form of an email address (ex. jdoe@example.com) as defined in
+             <xref target="RFC5322"/>.</t>
+             
+          <t>In an AC, the Issuer field MUST contain the webSSOAS attribute and
+             it MUST contain the URL used to issue the certificate.</t>
+             
+          <t>In either an AC or an ACR, the Subject MAY contain other
+             attributes to be used by the Protected Resource, including custom
+             attributes.</t>
+        </section>
+      </section>
+      
+      <section anchor="acimage" title="AC Image">
+        <t>An AC MAY contain one or more images representing the user
+           identified by the certificate as defined in <xref target="RFC6170"/>.
+           It is RECOMMENDED to use a photo of the user's face. It is also
+           RECOMMENDED to have the same image present in two sizes: 48x48
+           pixels and 128x128 pixels. Using a smaller color depth is
+           RECOMMENDED to keep certificate size down, so long as the reduced
+           color depth does not obscure the image.</t>
+      </section>
+      
+      <section anchor="extensions" title="webSSO Extensions">
+        <section anchor="webssoresource" title="webSSOResource Extension">
+          <t>The webSSOResource extension is an X.509 certificate extension of
+             the X.501 (<xref target="X.501"/>) Name type and with an OID of
+             TBD. This extension is used in an AC to identify which PR the AC
+             was issued for. An AC MUST contain one or more webSSOResource
+             extensions. An ACR also MUST contain one or more webSSOResource
+             extensions.</t>
+          
+          <t>The extension MUST be marked as critical.</t>
+        </section>
+        
+        <section anchor="webssodelegate" title="webSSODelegate Extension">
+          <t>The webSSODelegate extension is an X.509 certificate extension of
+             the X.501 (<xref target="X.501"/>) Name type and with an OID of
+             TBD. This extension is used in an AC to identify which delegate
+             the AC was issued to. An AC MUST NOT contain more than one
+             webSSODelegate extension.</t>
+             
+          <t>The extension, when present, MUST be marked as critical.</t>
+        </section>
+        
+        <section anchor="webssoresourcechain"
+                 title="webSSOResourceChain Extension">
+          <t>The webSSOResourceChain extension is an X.509 certificate
+             extension of the webSSOIdentity type and with an OID of TBD. The
+             extension is used in the ACR to pass the certificate chain of
+             the PR from the client to the AS for verification. An ACR MUST
+             contain exactly one webSSOResourceChain extension. The
+             webSSOIdentity type is defined as:</t>
+             
+          <t>webSSOIdentity ::= SEQUENCE {
+               cert  [0] EXPLICIT Certificate,
+               chain [1] EXPLICIT SEQUENCE OF Certificate OPTIONAL
+             }</t>
+        </section>
+      </section>
+    </section>
+    
+    <section anchor="protectedresource" title="Protected Resource">
+      <t>A Protected Resource (PR) is the server side of any TLS encrypted
+         connection which sends a client certificate message. The behavior of a
+         PR is governed by <xref target="RFC5246"/>. However, this section
+         defines an additional layer of verification to be performed on a
+         webSSO AC to avoid specific security problems that may arise.</t>
+         
+      <t>A PR MAY accept traditional X.509 client certificates
+         (<xref target="RFC5280"/>) by detecting the absense of the
+         webSSOResource extension in the provided client certificate and
+         bypassing the additional verifications provided here. This permits the
+         intermixing of traditional X.509 client certificates and webSSO's
+         extended validations ACs in a single PR.</t>
+   
+      <section anchor="extendedvalidation" title="Extended Validation">
+        <section anchor="domainvalidation" title="Domain Validation">
+          <t>A PR SHOULD validate the AC to ensure that its issuing AS has
+             authority to issue ACs for users in the domain listed in the AC's
+             Subject's DC attributes. Validation is performed by ensuring that
+             immediate child of the trusted root certificate in the signing
+             chain contains a critical nameConstraints extension (Section
+             4.2.1.10 of <xref target="RFC5280"/>) which contains the domain of
+             the user as expressed in the DC attributes of the AC's Subject
+             field.</t>
+             
+          <t>A PR which plans on trusting multiple ASs controlled by different
+             institutions MUST perform domain validation. Failure to do this
+             will permit one trusted AS to impersonate a second trusted AS.</t>
+             
+          <t>An AS MUST perform domain validation.</t>
+          
+          <t>TODO - Should intermediary certificates also be verified for
+             nameConstraints?</t>
+        </section>
+        
+        <section anchor="resourcevalidation" title="Resource Validation">
+          <t>A PR SHOULD validate the AC to ensure that the PR's certificate, or
+             one of its parent certificates, is present in at least one of the
+             AC's webSSOResource extensions. If this validation fails, the PR
+             SHOULD reject the AC as invalid.</t>
+             
+          <t>An AS MUST perform resource validation.</t>
+        </section>
+        
+        <section anchor="revocationvalidation" title="Revocation Validation">
+          <t>If an AC or any of the certificates in its signing heirarchy have
+             been configured for either CRL verification (Section
+             4.2.1.13 of <xref target="RFC5280"/>) or OCSP
+             (<xref target="RFC2560"/>), the PR SHOULD validate that these
+             certificates have not been revoked. It is RECOMMENDED that the PR
+             check an AC for revocation at least every 24 hours and at most
+             every 2 hours. It is RECOMMENDED that non-AC certificates be
+             checked for revocation once per day.</t>
+             
+          <t>An AS MUST perform revocation validation.</t>
+        </section>
+      </section>
+      
+      <section anchor="additionalresources" title="Additional Resources">
+        <t>Generally speaking, an AC that will be presented to a PR will be
+           keyed to the PR's certificate via the webSSOResource extension.
+           However, in cases where a given PR may be offered across many nodes,
+           each with their own certificate, it may be desired to key the AC
+           to a parent certificate rather than each node's individual
+           certificate.</t>
+           
+        <t>In order to accomplish this, the PR's certificate MAY itself contain
+           one or more webSSOResource extensions. This identifies to the client
+           which webSSOResource extensions to place in the ACR. However, any
+           certificates specified this way MUST be in the signing hierarchy of
+           the PR's individual certificate.</t>
+      </section>
+    </section>
+    
+    <section anchor="authserv" title="Authentication Service">
+      <t>An Authentication Service (AS) is an HTTP service available at a URL
+         called the Authentication Service URL (ASURL). The three HTTP methods
+         potentially provided by this service are as follows:
+         
+         <list style="symbols">
+           <t>POST - Authenticates a user and issues an AC.</t>
+           <t>DELETE - Authenticates a user and revokes ACs.</t>
+           <t>GET - Returns a logo for use in visually identifying the AS.</t>
+         </list></t>
+      
+      <t>The POST method is REQUIRED. All other methods are OPTIONAL. However,
+         if the POST method might issue ACs that have a lifespan of greater
+         than 24 hours, the DELETE method is REQUIRED. This enables users to
+         revoke long-term certificates that have been compromised. If a client
+         requests a method that is not supported by the AS, the AS MUST respond
+         with HTTP status code 405 ("Method Not Allowed") as per Section 10.4.6
+         of <xref target="RFC2616"/>.</t>
+      
+      <t>The GET method MAY be exposed outside of a TLS encrypted channel and
+         MUST NOT require authentication in any form. The POST and DELETE
+         methods MUST NOT be exposed outside of a TLS encrypted channel and
+         MUST authenticate the user.</t>
+         
+      <t>Normally, an AS MUST support authentication via an ACGC and
+         either traditional X.509 client certificate authentication or HTTP
+         authentication (ex. Basic, Digest, Kerberos).  However, in special
+         cases, an AS MAY operate in forwarding mode. When an AS operates in
+         forwarding mode it MUST support using an AC from another AS and MUST
+         NOT support any other type of authentication. Further, an AS in
+         forwarding mode MUST close the connection if no client certificate is
+         received. A single AS MUST NOT attempt to operate in both forwarding
+         and normal modes.</t>
+         
+      <t>The method descriptions which appear below (except GET) assume that
+         proper authentication of the user by the AS has already occurred.</t>
+         
+      <section anchor="postmethod" title="POST Method">
+        <t>The goal of the POST method is to take an ACR provided in the body
+           of the HTTP POST request and return a proper AC signifying that the
+           user specified in the AC has properly authenticated. For an
+           understanding of the HTTP Status codes specified in this section,
+           see Section 10.4 of <xref target="RFC2616"/>.</t>
+           
+        <t>An AS MUST support two types of data in the POST method body:
+           application/pkcs10 and application/pkcs7-signature. If any other
+           type is presented in the Content-Type HTTP header, the server MUST
+           return HTTP status code 400 ("Bad Request"). The type
+           application/pkcs10 indicates that the body contains an ACR. The type
+           application/pkcs7-signature indicates that the body contains a
+           DACR.</t>
+        <t>TODO - Should we define new MIME types? This may be particularly
+           helpful for the DACR.</t>
+           
+        <t>If the request contains a DACR, the AS MUST validate the delegate's
+           signature before processing the ACR. If the signature does not
+           validate, the AS MUST return HTTP status code 403 ("Forbidden").</t>
+           
+        <t>The AS MUST verify the ACR for the presence of at least one
+           webSSOResource extension and for exactly one webSSOResourceChain
+           extension. Futher, the AS MUST verify that the names specified in
+           the webSSOResource extensions refer to certificates in the
+           webSSOResourceChain extension. If any of these verifications fail,
+           the AS MUST return HTTP status code 400 ("Bad Request"). Finally,
+           the AS MUST validate the certificate chain contained in the
+           webSSOResourceChain extension. If this validation fails, the AS MUST
+           return the HTTP status code 403 ("Forbidden").</t>
+        
+        <t>The AS MAY validate any other field or extension of the ACR and
+           return appropriate HTTP status codes on failure. However, if during
+           this OPTIONAL validation, a failure occurs due to violation of an AS
+           security policy, the AS MUST return HTTP status code 403
+           ("Forbidden").</t>
+           
+        <t>Once the ACR has passed validation, an AC will be generated. The AC
+           MUST NOT contain the webSSOResourceChain extension. However, The AC
+           MUST contain all the webSSOResource extensions copied from the ACR.
+           The AS MAY choose to copy any data from the ACR into the AC.
+           Conversely, the AS MAY choose to generate any additional AC data
+           from scratch or from an internal database and ignore the data
+           contained in the ACR. However, the AS MUST NOT copy any data into
+           the AC from the ACR which it cannot internally validate since the
+           resulting AC represents the canonical information about the user.</t>
+           
+        <t>If the request contained a DACR, then the Subject field of the
+           delegate certificate MUST be copied into a webSSODelegate extension
+           in the AC.</t>
+           
+        <t>If the AC issued by the AS has a lifespan of more than 24 hours, the
+           AC MUST include any information required to validate revocation,
+           either as a cRLDistributionPoints extension (Section
+           4.2.1.13 of <xref target="RFC5280"/>) or via OSCP
+           (<xref target="RFC2560"/>).</t>
+           
+        <t>Upon success, AS MUST return the AC and its entire signing hierarchy
+           in the body of the response.</t>
+           
+        <t>If non-ACGC authentication has been used and the AS is operating in
+           normal mode, the AS SHOULD only issue ACGCs.</t>
+      </section>
+      
+      <section anchor="deletemethod" title="DELETE Method">
+        <t>The DELETE method is OPTIONAL. However, if the AS is configured
+           to permit the creation of ACs with a lifespan of more than 24 hours,
+           the DELETE method MUST be implemented.</t>
+           
+        <t>The body of the DELETE request MUST contain zero or more comma-
+           separated AC serial numbers to revoke. When called, the AS MUST
+           revoke all ACs specified. However, if a DELETE request contains the
+           serial number of an AC which is owned by another user, the AS MUST
+           return HTTP status code 403 ("Forbidden"). If no serial numbers are
+           specified, the AS MUST revoke all ACs issued for the authenticated
+           user. A revoked AC MUST appear at the cRLDistributionPoints or OCSP
+           servers within 2 hours. Immediate update is RECOMMENDED.</t>
+      </section>
+      
+      <section anchor="getmethod" title="GET Method">
+        <t>The GET method is OPTIONAL.</t>
+           
+        <t>The GET method takes no input and returns a image file with the logo
+           representing the AS. Using scalable vector image formats is highly
+           RECOMMENDED.</t>
+      </section>
+    </section>
+    
+    <section anchor="client" title="webSSO Clients">
+      <t>A webSSO client is a standard TLS-enabled client that knows how to
+         find and use an AS to obtain an Authentication Certificate. In a
+         normal TLS negotiation, if a CertificateRequest message is sent to the
+         client, the client will attempt to locate an appropriate certificate,
+         usually by finding matching certificates in a database and/or
+         prompting the user. webSSO is best understood from the client side as
+         an alternative mechanism by which to locate a certificate.</t>
+      
+      <section anchor="certcache" title="Certificate Cache">   
+        <t>The client MUST maintain a cache of all keypairs generated and
+           all certificates obtained. This cache MAY be accessable to other
+           clients run in the same user session. However, it RECOMMENDED to avoid
+           writing the cache to long-term storage. Further, the client MUST NOT
+           write the cache to network based storage. Failure to comply with this
+           requirement provides opportunity for an unpriviledged user to capture
+           keypairs that travel over the network.</t>
+      </section>
+      
+      <section anchor="loginprocess" title="Login Process">
+        <section anchor="existingac" title="Using an Existing AC">
+          <t>When a CertificateRequest message is received from a PR, the
+             client MUST first attempt to use a pre-existing AC from the cache.
+             A pre-existing AC is matched from the cache using the following
+             criteria. First, the rules defined by Section 7.4.4 of
+             <xref target="RFC6170" /> must be followed. Second, the AC MUST
+             have the PR's certificiate, or one of the PR's parent
+             certificates, in one of the AC's webSSOResource extensions' cert
+             field.</t>
+             
+          <t>If a matching, non-expired AC is found, it SHOULD be automatically
+             provided to the PR. In this case no further work is required and
+             the user SHOULD NOT be prompted. In the case where multiple
+             matching, non-expired ACs are found, the client MUST choose the
+             one with the most recent notBefore time.</t>
+        </section>
+        
+        <section anchor="chooseas" title="Choosing an AS">
+          <t>If no matching, non-expired AC was found in the cache, the client
+             will need to make a decision about which AS to use to obtain an
+             AC or, alternatively, which traditional client certificate to use.
+             This decision can in some cases be made automatically. However, in
+             most cases the user will be prompted.</t>
+        
+          <section anchor="automaticas" title="Automatically Choosing an AS">
+            <t>There are two cases in which an AS can be selected automatically
+               and the user SHOULD NOT be prompted.</t>
+               
+            <t>First, if a matching, expired AC is found in the cache, the
+               client SHOULD use the AS specified in the AC's webSSOAS Issuer
+               attribute. In the case where multiple matching, expired ACs are
+               found, the client MUST choose the one with the most recent
+               notBefore time.</t>
+               
+            <t>Second, if the PR presents only one certificate authority in the
+               CertificateRequest message and this one certificate authority
+               has the webSSOAS attribute, the client SHOULD use the AS
+               specified in this attribute.</t>
+          </section>
+          
+          <section anchor="manualas" title="Manually Choosing an AS">
+            <t>If an AS cannot be chosen automatically, then the client SHOULD
+               prompt the user identify which AS should be used.</t>
+               
+             <section anchor="byusername" title="By Username">
+               <t>The client MUST support specifying AS by username. In this
+                  case the user will be prompted to enter his username in the
+                  format of an email address. The client then MUST perform a
+                  DNS TXT record query on the domain name portion of the
+                  username prepended by _websso. The result of this query is
+                  the ASURL to use to authenticate the user.</t>
+                  
+               <t>For example, to authenticate the user michelle@example.com,
+                  the client uses the AS specified in the _websso.example.com
+                  TXT record.</t>
+             </section>
+             
+             <section anchor="byacgc" title="By ACGC">
+               <t>The client SHOULD list the ACGCs in the cache which match the
+                  criteria specified in section 7.4.4 of
+                  <xref target="RFC6170"/> since these ACGCs can be used to
+                  obtain a new AC without requiring new credentials. The client
+                  may display any information in the Subject or Issuer fields
+                  of the ACGC. Specifically, displaying images embedded in the
+                  ACGC is RECOMMENDED. Further, the client MAY superimpose the
+                  AS logo (obtained from the ASURL) on top of the certificate
+                  image so long as the certificate image is not obscured.</t>
+             </section>
+             
+             <section anchor="byca" title="By Certificate Authorities">
+               <t>The client SHOULD list the ASs referenced by the webSSOAS
+                  attributes found in the certificate authorities section of
+                  the CertificateRequest message as suggested ASs to use. The
+                  client MAY display any information from the certificate
+                  authorities DistinguishedNames. Specifically, displaying the
+                  AS logo referenced by the webSSOAS attribute is
+                  RECOMMENDED.</t>
+             </section>
+             
+             <section anchor="byasurl" title="By ASURL">
+               <t>The client MAY permit the user to enter an ASURL manually.</t>
+             </section>
+             
+            <section anchor="tradcc" title="Traditional Client Certificates">
+               <t>Since webSSO maintains compatibility with traditional client
+                  certificates, webSSO client SHOULD display matching
+                  traditional client certificates in a manner similar to ACGCs,
+                  since both can be selected to provide authentication without
+                  requiring any further credentials.</t>
+            </section>
+          </section>
+        </section>
+        
+        <section anchor="generatingacr" title="Generating the ACR">
+          <t>Once the AS is chosen the client MUST generate a new keypair.
+             Using the public key from the new keypair, the client MUST
+             generate a new ACR.</t>
+             
+          <t>If the client does not yet have the username of the user, it
+             SHOULD prompt the user at this time. The username MUST be
+             converted to the attribute notation (UID/DC format) and inserted
+             into the Subject field of the ACR.</t>
+             
+          <t>Next, the client MUST create the webSSOResourceChain extension in
+             the ACR containing the full certificate chain of the PR.</t>
+             
+          <t>Next, the client MUST create a webSSOResource extension containing
+             the Subject of the PR's certificate. If the PR's certificate
+             contains any webSSOResource extensions and the Names they contain
+             are present in the PR's certificate signing hierarchy, they SHOULD
+             be copied into the ACR. The client MUST NOT copy a Name from the
+             PR certificate's webSSOResource extension into the ACR if it does
+             not exist in the PR's certificate hierarchy.</t>
+             
+          <t>The client MAY specify any other information in the ACR. This
+             information is a hint only, and the AS MAY reject information it
+             deems unacceptable.</t>
+        </section>
+        
+        <section anchor="obtainingac" title="Obtaining a New AC">
+          <t>Now that the client has the AS, it MUST connect to the AS. If
+             the AS is not encrypted by TLS, the client MUST NOT use the AS.
+             Futher, if the certificate used by the AS to encrypt the
+             connection is not trusted by the client, the client MUST NOT use
+             the AS.</t>
+
+          <t>Since the AS it itself a PR, it will send the CertficateRequest
+             message as part of the connection process. If the client
+             possesses an ACGC for this PR, it should automatically provide
+             the ACGC. Otherwise, it should attempt to conclude negotiation
+             without a client certificate. If this negotiation fails, the
+             client MUST reconnect and attempt to find a suitable certificate
+             using the webSSO methodology recursively.</t>
+             
+          <t>If an ACGC or other certificate (either webSSO or traditoinal)
+             is provided to the AS and the connection is established, the
+             client MUST POST the ACR to the AS. If this suceeds without
+             HTTP authentication, then the certificate authentication was
+             sufficient to grant an AC. In this case, the client's task is
+             complete and the resulting AC can be provided back to the 
+             original PR.</t>
+             
+          <t>However, if the client is presented with HTTP authentication,
+             then the client MUST attempt to first obtain an ACGC. Thus, the
+             client MUST then generate a second ACR for the ACGC
+             (see <xref target="generatingacr"/>). The client MUST submit
+             this ACR for all future POSTs until the ACGC is obtained. Once
+             the ACGC is obtained, the client MUST use the ACGC to submit the
+             original ACR.</t>
+             
+          <t>Also when presented with HTTP authentication, if the client
+             prompts the user to enter credentials, if the current connection
+             was established without a client certificate (webSSO or
+             traditional), the prompt for HTTP credentials SHOULD offer
+             traditional client certificate authentication as a secondary
+             option. If the traditional client certificate option is chosen,
+             the client MUST then renegotiate TLS, providing the client
+             certificate selected. If the AS still prompts for the use of
+             HTTP authentication, the client SHOULD prompt the user for this
+             information again, but exclude the client certificate option
+             since a client certificate was already selected. This is to
+             allow for the case of using a traditional client certificate to
+             obtain a webSSO ACGC.</t>
+             
+          <t>Once an ACGC is obtained, the client MUST renegotiate the TLS
+             connection, providing the ACGC, and POST the original ACR,
+             obtaining an AC for the PR.</t>
+        </section>
+      </section>
+    </section>
+    
+    <section anchor="security" title="Security Considerations">
+      <t>Since webSSO relies heavily on existing standards, the security
+         considerations from those standards are applicable when they are used.
+         This is most specifically TLS Client Authentication and HTTP
+         Authentication.</t>
+         
+      <t>The most important consideration is that each of the parties in the
+         transaction are validated via standard certificate validation (and
+         webSSO extended validation in the case of a PR). The
+         client verifies the PR and AS by ensuring their certificates are valid
+         and trusted. When processing a DACR, the delegate is verified as well
+         via the webSSODelegate extension. The AS verifies the client via
+         either HTTP Authentication or TLS Client Certificate
+         Authentication. The AS also verifies the PR and delegate via the
+         webSSOResource and the webSSODelegate extensions, respectively. The
+         PR establishes a trust with a given AS by a manual setup process,
+         which may or may not involve a third-party Certificate Authority. Once
+         this trust is established, the user trusts ACs issued by the AS.
+         Further, the PR may also validate the delegate via the webSSODelegate
+         extension. The end result is that all parties have been verified in
+         every transaction.</t>
+         
+      <t>One specific problem that may arise is where a PR trusts either a
+         public certificate authority or multiple private certificates from
+         third parties. In this case, two parties can issue a certificate to
+         the PR for the same domain, allowing one to impersonate the other.
+         Mitigation of this problem is provided by using the standard
+         nameConstraints extension.</t>
+         
+      <t>In order to limit the exposure in the case of a compromised AC, AC's
+         are always generated to a specific PR. This prevents a certificate
+         issued for one service to be used for other services, and most
+         specifically prevents a normal AC from being used as an ACGC to obtain
+         further certificates.</t>
+    </section>
+    
+    <section anchor="iana" title="IANA Considerations">
+      <t>This section needs to be filled in once standard OIDs are selected
+         for the webSSO attributes and extensions.</t>
+    </section>
+  </middle>
+  <back>
+    <references>
+      <reference anchor="X.501">
+        <front>
+          <title>Recommendation X.501: The Directory - Models</title>
+          <author><organization abbrev="">CCITT</organization></author>
+          <date year="1988" />
+        </front>
+      </reference>
+      
+      <reference anchor="RFC2119">
+        <front>
+          <title>Key words for use in RFCs to Indicate Requirement Levels</title>
+            <author initials="S." surname="Bradner" fullname="S. Bradner">
+              <organization>Harvard University</organization>
+            </author>
+            <date month="March" year="1997" />
+        </front>
+        <seriesInfo name="RFC" value="2119" />
+      </reference>
+
+      <reference anchor="RFC2560">
+        <front>
+          <title>X.509 Internet Public Key Infrastructure Online Certificate Status Protocol - OCSP</title>
+            <author initials="M." surname="Myers" fullname="M. Myers">
+              <organization>VeriSign</organization>
+            </author>
+            <author initials="R." surname="Ankney" fullname="R. Ankney">
+              <organization>CertCo</organization>
+            </author>
+            <author initials="A." surname="Malpani" fullname="A. Malpani">
+              <organization>ValiCert</organization>
+            </author>
+            <author initials="S." surname="Galperin" fullname="S. Galperin">
+              <organization>My CFO</organization>
+            </author>
+            <author initials="C." surname="Adams" fullname="C. Adams">
+              <organization>Entrust Technologies</organization>
+            </author>
+            <date month="June" year="1999" />
+        </front>
+        <seriesInfo name="RFC" value="2560" />
+      </reference>
+
+      <reference anchor="RFC2986">
+        <front>
+          <title>PKCS #10: Certification Request Syntax Specification - Version 1.7</title>
+            <author initials="M." surname="Nystrom" fullname="M. Nystrom"></author>
+            <author initials="B." surname="Kaliski" fullname="B. Kaliski">
+              <organization>RSA Security</organization>
+            </author>
+            <date month="November" year="2000" />
+        </front>
+        <seriesInfo name="RFC" value="2986" />
+      </reference>
+
+      <reference anchor="RFC5246">
+        <front>
+          <title>The Transport Layer Security (TLS) Protocol - Version 1.2</title>
+            <author initials="T." surname="Dierks" fullname="T. Dierks">
+              <organization>Independent</organization>
+            </author>
+            <author initials="E." surname="Rescorla" fullname="E. Rescorla">
+              <organization>RTFM, Inc.</organization>
+            </author>
+            <date month="August" year="2008" />
+        </front>
+        <seriesInfo name="RFC" value="5246" />
+      </reference>
+      
+      <reference anchor="RFC2616">
+        <front>
+          <title>Hypertext Transfer Protocol -- HTTP/1.1</title>
+            <author initials="R." surname="Fielding" fullname="R. Fielding">
+              <organization>UC Irvine</organization>
+            </author>
+            <author initials="J." surname="Gettys" fullname="J. Gettys">
+              <organization>Compaq/W3C</organization>
+            </author>
+            <author initials="J." surname="Mogul" fullname="J. Mogul">
+              <organization>Compaq</organization>
+            </author>
+            <author initials="H." surname="Frystk" fullname="H. Frystk">
+              <organization>W3C/MIT</organization>
+            </author>
+            <author initials="L." surname="Masinter" fullname="L. Masinter">
+              <organization>Xerox</organization>
+            </author>
+            <author initials="P." surname="Leach" fullname="P. Leach">
+              <organization>Microsoft</organization>
+            </author>
+            <author initials="T." surname="Berners-Lee" fullname="T. Berners-Lee">
+              <organization>W3C/MIT</organization>
+            </author>
+            <date month="June" year="1999" />
+        </front>
+        <seriesInfo name="RFC" value="2616" />
+      </reference>
+
+      <reference anchor="RFC4514">
+        <front>
+          <title>Lightweight Directory Access Protocol (LDAP): String Representation of Distinguished Names</title>
+            <author initials="K." surname="Zeilenga" fullname="K. Zeilenga">
+              <organization>OpenLDAP Foundation</organization>
+            </author>
+            <date month="June" year="2006" />
+        </front>
+        <seriesInfo name="RFC" value="4514" />
+      </reference>
+
+      <reference anchor="RFC4519">
+        <front>
+          <title>Lightweight Directory Access Protocol (LDAP): Schema for User Applications</title>
+            <author initials="A." surname="Sciberras" fullname="A. Sciberras">
+              <organization>eB2Bcom</organization>
+            </author>
+            <date month="June" year="2006" />
+        </front>
+        <seriesInfo name="RFC" value="4519" />
+      </reference>
+
+      <reference anchor="RFC5280">
+        <front>
+          <title>Internet X.509 Public Key Infrastructure Certificate and Certificate Revocation List (CRL) Profile</title>
+            <author initials="D." surname="Cooper" fullname="D. Cooper">
+              <organization>NIST</organization>
+            </author>
+            <author initials="S." surname="Santesson" fullname="S. Santesson">
+              <organization>Microsoft</organization>
+            </author>
+            <author initials="S." surname="Farrell" fullname="S. Farrell">
+              <organization>Trinity College Dublin</organization>
+            </author>
+            <author initials="S." surname="Boeyen" fullname="S. Boeyen">
+              <organization>Entrust</organization>
+            </author>
+            <author initials="R." surname="Housley" fullname="R. Housley">
+              <organization>Vigil Security</organization>
+            </author>
+            <author initials="W." surname="Polk" fullname="W. Polk">
+              <organization>NIST</organization>
+            </author>
+            <date month="May" year="2008" />
+        </front>
+        <seriesInfo name="RFC" value="5280" />
+      </reference>
+                        
+      <reference anchor="RFC5322">
+        <front>
+          <title>Internet Message Format</title>
+            <author initials="P." surname="Resnick" fullname="P. Resnick">
+              <organization>Qualcomm Incorporated</organization>
+            </author>
+            <date month="October" year="2008" />
+        </front>
+        <seriesInfo name="RFC" value="5322" />
+      </reference>
+      
+      <reference anchor="RFC5652">
+        <front>
+          <title>Cryptographic Message Syntax (CMS)</title>
+            <author initials="R." surname="Housley" fullname="R. Housley">
+              <organization>Vigil Security</organization>
+            </author>
+            <date month="September" year="2009" />
+        </front>
+        <seriesInfo name="RFC" value="5652" />
+      </reference>
+      
+      <reference anchor="RFC6170">
+        <front>
+          <title>Internet X.509 Public Key Infrastructure -- Certificate Image</title>
+            <author initials="S." surname="Santesson" fullname="S. Santesson">
+              <organization>3xA Security</organization>
+            </author>
+            <author initials="R." surname="Housley" fullname="R. Housley">
+              <organization>Vigil Security</organization>
+            </author>
+            <author initials="S." surname="Bajaj" fullname="S. Bajaj">
+              <organization>Symantec Corp.</organization>
+            </author>
+            <author initials="L." surname="Rosenthol" fullname="L. Rosenthol">
+              <organization>Adobe</organization>
+            </author>
+            <date month="May" year="2011" />
+        </front>
+        <seriesInfo name="RFC" value="6170" />
+      </reference>
+    </references>
+  </back>
+</rfc>

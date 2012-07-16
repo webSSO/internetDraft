@@ -1,0 +1,1120 @@
+
+
+
+Network Working Group                                        N. McCallum
+Internet-Draft                                             Red Hat, Inc.
+Intended status: Standards Track                                May 2012
+Expires: November 2, 2012
+
+
+                      Web Single Sign-On (webSSO)
+                                 README
+
+Abstract
+
+   webSSO is an application-level protocol for decentralized, federated
+   authentication at the presentation-level.  It provides an automated,
+   stateless technique for obtaining X.509 Client Certificates based
+   upon a user's authentication credentials.
+
+Status of this Memo
+
+   By submitting this Internet-Draft, each author represents that any
+   applicable patent or other IPR claims of which he or she is aware
+   have been or will be disclosed, and any of which he or she becomes
+   aware will be disclosed, in accordance with Section 6 of BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at http://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on November 2, 2012.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+McCallum                Expires November 2, 2012                [Page 1]
+
+Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+
+
+Table of Contents
+
+   1.  Introduction . . . . . . . . . . . . . . . . . . . . . . . . .  3
+     1.1.  Purpose  . . . . . . . . . . . . . . . . . . . . . . . . .  3
+     1.2.  Requirements . . . . . . . . . . . . . . . . . . . . . . .  3
+     1.3.  Terminology  . . . . . . . . . . . . . . . . . . . . . . .  3
+     1.4.  Overview . . . . . . . . . . . . . . . . . . . . . . . . .  4
+   2.  Formatting . . . . . . . . . . . . . . . . . . . . . . . . . .  5
+     2.1.  Distinguished Names  . . . . . . . . . . . . . . . . . . .  5
+       2.1.1.  webSSOAS Attribute . . . . . . . . . . . . . . . . . .  5
+       2.1.2.  Required Attributes  . . . . . . . . . . . . . . . . .  5
+     2.2.  AC Image . . . . . . . . . . . . . . . . . . . . . . . . .  5
+     2.3.  webSSO Extensions  . . . . . . . . . . . . . . . . . . . .  5
+       2.3.1.  webSSOResource Extension . . . . . . . . . . . . . . .  5
+       2.3.2.  webSSODelegate Extension . . . . . . . . . . . . . . .  6
+       2.3.3.  webSSOResourceChain Extension  . . . . . . . . . . . .  6
+   3.  Protected Resource . . . . . . . . . . . . . . . . . . . . . .  7
+     3.1.  Extended Validation  . . . . . . . . . . . . . . . . . . .  7
+       3.1.1.  Domain Validation  . . . . . . . . . . . . . . . . . .  7
+       3.1.2.  Resource Validation  . . . . . . . . . . . . . . . . .  7
+       3.1.3.  Revocation Validation  . . . . . . . . . . . . . . . .  8
+     3.2.  Additional Resources . . . . . . . . . . . . . . . . . . .  8
+   4.  Authentication Service . . . . . . . . . . . . . . . . . . . .  9
+     4.1.  POST Method  . . . . . . . . . . . . . . . . . . . . . . .  9
+     4.2.  DELETE Method  . . . . . . . . . . . . . . . . . . . . . . 11
+     4.3.  GET Method . . . . . . . . . . . . . . . . . . . . . . . . 11
+   5.  webSSO Clients . . . . . . . . . . . . . . . . . . . . . . . . 12
+     5.1.  Certificate Cache  . . . . . . . . . . . . . . . . . . . . 12
+     5.2.  Login Process  . . . . . . . . . . . . . . . . . . . . . . 12
+       5.2.1.  Using an Existing AC . . . . . . . . . . . . . . . . . 12
+       5.2.2.  Choosing an AS . . . . . . . . . . . . . . . . . . . . 12
+       5.2.3.  Generating the ACR . . . . . . . . . . . . . . . . . . 14
+       5.2.4.  Obtaining a New AC . . . . . . . . . . . . . . . . . . 14
+   6.  Security Considerations  . . . . . . . . . . . . . . . . . . . 16
+   7.  IANA Considerations  . . . . . . . . . . . . . . . . . . . . . 17
+   8.  References . . . . . . . . . . . . . . . . . . . . . . . . . . 18
+   Author's Address . . . . . . . . . . . . . . . . . . . . . . . . . 19
+   Intellectual Property and Copyright Statements . . . . . . . . . . 20
+
+
+
+
+
+
+
+
+
+
+
+
+
+McCallum                Expires November 2, 2012                [Page 2]
+
+Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+
+
+1.  Introduction
+
+1.1.  Purpose
+
+   webSSO is an application-level protocol for decentralized, federated
+   authentication at the presentation-level.  It provides an automated,
+   stateless technique for obtaining X.509 Client Certificates based
+   upon a user's authentication credentials.
+
+   webSSO intends to decouple authentication from authorization and to
+   permit inter-organizational trust of user credentials.  It is
+   designed to deploy on existing TLS enabled protocol stacks,
+   particularly HTTPS, using pre-existing trust relationships.  In
+   particular, all communication occurs using the client as a proxy,
+   enabling trust relationships across discreet, disconnected networks.
+
+1.2.  Requirements
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   [RFC2119].
+
+1.3.  Terminology
+
+   Protected Resource:  The server side of any TLS encrypted connection
+      which sends a client certificate message.  See [RFC5246].
+
+   Authentication Service (AS):  An HTTP ([RFC2119]) service which
+      issues X.509 client certificates.
+
+   Authentication Service URL (ASURL):  The Uniform Resource Locator
+      where the Authentication Service can be found.
+
+   Authentication Certificate (AC):  An X.509 client certificate issued
+      by the Authentication Service.
+
+   Authentication Certificate Granting Certificate (ACGC):  An
+      Authentication Certificate issued by the Authentication Service
+      for itself.  It is used to obtain further Authentication
+      Certificates for other services without re-entering the user's
+      credentials.
+
+   Authentication Certification Request (ACR):  A PKCS #10 Certification
+      Request message [RFC2986] which is POSTed to the ASURL in order to
+      obtain an AC.
+
+
+
+
+
+McCallum                Expires November 2, 2012                [Page 3]
+
+Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+
+
+   Delegate Authentication Certification Request (DACR):  An ACR wrapped
+      in a PKCS #7 signature [RFC5652] and signed by the delegate
+      requesting access.
+
+1.4.  Overview
+
+   webSSO does not provide authentication directly, but rather is a
+   policy layer on top of the existing TLS client certificate
+   authentication ([RFC5246]) and/or HTTP authentication ([RFC2616]).
+   Without using webSSO, when a Protected Resource requests an X.509
+   client certificate, obtaining this certificate can be an error-prone
+   manual process.  This typically leads to the issuance of medium- to
+   long-term client certificates.  By contrast, when using webSSO, an
+   X.509 client certificate can be obtained dynamically, allowing the
+   conveninece and lower-risk of short-term certificates, called
+   Authentication Certificates (AC).
+
+   The core of webSSO is the Authentication Service (AS).  An AS is an
+   HTTP service which issues client certificates and, optionally,
+   provides a standard mechanism for revoking issued certificates.  The
+   AS is itself a Protected Resource (PR), allowing the use of an ACGC
+   to obtain new ACs without re-entering credentials.
+
+   Additionally, the client the defined client behavior permits the
+   seamless location and use of the AS to dynamically allocate
+   certificates for authentication.  Thus, when a client encounters a PR
+   that it does not have a valid certificate for, it will locate and use
+   an AS to generate an AC for the PR using an ACGC.  If the client does
+   not have an ACGC for this AS, it will request one from the AS,
+   authenticating as necessary.  Once a client has an ACGC for the AS,
+   it will use the ACGC to request an AC for the PR.  Once the client
+   possesses a proper AC, it can reauthenticate to the PR without
+   further contacting the AS until the AC expires or is revoked.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+McCallum                Expires November 2, 2012                [Page 4]
+
+Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+
+
+2.  Formatting
+
+2.1.  Distinguished Names
+
+2.1.1.  webSSOAS Attribute
+
+   The webSSOAS attribute is a Subject/Issuer attribute with the OID
+   TBD.  It is a UTF8String which contains an ASURL.  A Subject or
+   Issuer field MUST NOT contain more than one webSSOAS attribute.
+
+   Any certificate used to sign AC's by an AS MUST contain the webSSOAS
+   attribute in its Subject field.
+
+2.1.2.  Required Attributes
+
+   In either an AC or an ACR, a Subject MUST contain exactly one UID
+   attribute and one or more DC attributes as defined in [RFC4514] and
+   [RFC4519].  Further, the content of these attributes MUST be able to
+   be expressed in the form of an email address (ex. jdoe@example.com)
+   as defined in [RFC5322].
+
+   In an AC, the Issuer field MUST contain the webSSOAS attribute and it
+   MUST contain the URL used to issue the certificate.
+
+   In either an AC or an ACR, the Subject MAY contain other attributes
+   to be used by the Protected Resource, including custom attributes.
+
+2.2.  AC Image
+
+   An AC MAY contain one or more images representing the user identified
+   by the certificate as defined in [RFC6170].  It is RECOMMENDED to use
+   a photo of the user's face.  It is also RECOMMENDED to have the same
+   image present in two sizes: 48x48 pixels and 128x128 pixels.  Using a
+   smaller color depth is RECOMMENDED to keep certificate size down, so
+   long as the reduced color depth does not obscure the image.
+
+2.3.  webSSO Extensions
+
+2.3.1.  webSSOResource Extension
+
+   The webSSOResource extension is an X.509 certificate extension of the
+   X.501 ([X.501]) Name type and with an OID of TBD.  This extension is
+   used in an AC to identify which PR the AC was issued for.  An AC MUST
+   contain one or more webSSOResource extensions.  An ACR also MUST
+   contain one or more webSSOResource extensions.
+
+   The extension MUST be marked as critical.
+
+
+
+
+McCallum                Expires November 2, 2012                [Page 5]
+
+Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+
+
+2.3.2.  webSSODelegate Extension
+
+   The webSSODelegate extension is an X.509 certificate extension of the
+   X.501 ([X.501]) Name type and with an OID of TBD.  This extension is
+   used in an AC to identify which delegate the AC was issued to.  An AC
+   MUST NOT contain more than one webSSODelegate extension.
+
+   The extension, when present, MUST be marked as critical.
+
+2.3.3.  webSSOResourceChain Extension
+
+   The webSSOResourceChain extension is an X.509 certificate extension
+   of the webSSOIdentity type and with an OID of TBD.  The extension is
+   used in the ACR to pass the certificate chain of the PR from the
+   client to the AS for verification.  An ACR MUST contain exactly one
+   webSSOResourceChain extension.  The webSSOIdentity type is defined
+   as:
+
+   webSSOIdentity ::= SEQUENCE { cert [0] EXPLICIT Certificate, chain
+   [1] EXPLICIT SEQUENCE OF Certificate OPTIONAL }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+McCallum                Expires November 2, 2012                [Page 6]
+
+Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+
+
+3.  Protected Resource
+
+   A Protected Resource (PR) is the server side of any TLS encrypted
+   connection which sends a client certificate message.  The behavior of
+   a PR is governed by [RFC5246].  However, this section defines an
+   additional layer of verification to be performed on a webSSO AC to
+   avoid specific security problems that may arise.
+
+   A PR MAY accept traditional X.509 client certificates ([RFC5280]) by
+   detecting the absense of the webSSOResource extension in the provided
+   client certificate and bypassing the additional verifications
+   provided here.  This permits the intermixing of traditional X.509
+   client certificates and webSSO's extended validations ACs in a single
+   PR.
+
+3.1.  Extended Validation
+
+3.1.1.  Domain Validation
+
+   A PR SHOULD validate the AC to ensure that its issuing AS has
+   authority to issue ACs for users in the domain listed in the AC's
+   Subject's DC attributes.  Validation is performed by ensuring that
+   immediate child of the trusted root certificate in the signing chain
+   contains a critical nameConstraints extension (Section 4.2.1.10 of
+   [RFC5280]) which contains the domain of the user as expressed in the
+   DC attributes of the AC's Subject field.
+
+   A PR which plans on trusting multiple ASs controlled by different
+   institutions MUST perform domain validation.  Failure to do this will
+   permit one trusted AS to impersonate a second trusted AS.
+
+   An AS MUST perform domain validation.
+
+   TODO - Should intermediary certificates also be verified for
+   nameConstraints?
+
+3.1.2.  Resource Validation
+
+   A PR SHOULD validate the AC to ensure that the PR's certificate, or
+   one of its parent certificates, is present in at least one of the
+   AC's webSSOResource extensions.  If this validation fails, the PR
+   SHOULD reject the AC as invalid.
+
+   An AS MUST perform resource validation.
+
+
+
+
+
+
+
+McCallum                Expires November 2, 2012                [Page 7]
+
+Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+
+
+3.1.3.  Revocation Validation
+
+   If an AC or any of the certificates in its signing heirarchy have
+   been configured for either CRL verification (Section 4.2.1.13 of
+   [RFC5280]) or OCSP ([RFC2560]), the PR SHOULD validate that these
+   certificates have not been revoked.  It is RECOMMENDED that the PR
+   check an AC for revocation at least every 24 hours and at most every
+   2 hours.  It is RECOMMENDED that non-AC certificates be checked for
+   revocation once per day.
+
+   An AS MUST perform revocation validation.
+
+3.2.  Additional Resources
+
+   Generally speaking, an AC that will be presented to a PR will be
+   keyed to the PR's certificate via the webSSOResource extension.
+   However, in cases where a given PR may be offered across many nodes,
+   each with their own certificate, it may be desired to key the AC to a
+   parent certificate rather than each node's individual certificate.
+
+   In order to accomplish this, the PR's certificate MAY itself contain
+   one or more webSSOResource extensions.  This identifies to the client
+   which webSSOResource extensions to place in the ACR.  However, any
+   certificates specified this way MUST be in the signing hierarchy of
+   the PR's individual certificate.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+McCallum                Expires November 2, 2012                [Page 8]
+
+Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+
+
+4.  Authentication Service
+
+   An Authentication Service (AS) is an HTTP service available at a URL
+   called the Authentication Service URL (ASURL).  The three HTTP
+   methods potentially provided by this service are as follows:
+
+   o  POST - Authenticates a user and issues an AC.
+
+   o  DELETE - Authenticates a user and revokes ACs.
+
+   o  GET - Returns a logo for use in visually identifying the AS.
+
+   The POST method is REQUIRED.  All other methods are OPTIONAL.
+   However, if the POST method might issue ACs that have a lifespan of
+   greater than 24 hours, the DELETE method is REQUIRED.  This enables
+   users to revoke long-term certificates that have been compromised.
+   If a client requests a method that is not supported by the AS, the AS
+   MUST respond with HTTP status code 405 ("Method Not Allowed") as per
+   Section 10.4.6 of [RFC2616].
+
+   The GET method MAY be exposed outside of a TLS encrypted channel and
+   MUST NOT require authentication in any form.  The POST and DELETE
+   methods MUST NOT be exposed outside of a TLS encrypted channel and
+   MUST authenticate the user.
+
+   Normally, an AS MUST support authentication via an ACGC and either
+   traditional X.509 client certificate authentication or HTTP
+   authentication (ex.  Basic, Digest, Kerberos).  However, in special
+   cases, an AS MAY operate in forwarding mode.  When an AS operates in
+   forwarding mode it MUST support using an AC from another AS and MUST
+   NOT support any other type of authentication.  Further, an AS in
+   forwarding mode MUST close the connection if no client certificate is
+   received.  A single AS MUST NOT attempt to operate in both forwarding
+   and normal modes.
+
+   The method descriptions which appear below (except GET) assume that
+   proper authentication of the user by the AS has already occurred.
+
+4.1.  POST Method
+
+   The goal of the POST method is to take an ACR provided in the body of
+   the HTTP POST request and return a proper AC signifying that the user
+   specified in the AC has properly authenticated.  For an understanding
+   of the HTTP Status codes specified in this section, see Section 10.4
+   of [RFC2616].
+
+   An AS MUST support two types of data in the POST method body:
+   application/pkcs10 and application/pkcs7-signature.  If any other
+
+
+
+McCallum                Expires November 2, 2012                [Page 9]
+
+Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+
+
+   type is presented in the Content-Type HTTP header, the server MUST
+   return HTTP status code 400 ("Bad Request").  The type application/
+   pkcs10 indicates that the body contains an ACR.  The type
+   application/pkcs7-signature indicates that the body contains a DACR.
+
+   TODO - Should we define new MIME types?  This may be particularly
+   helpful for the DACR.
+
+   If the request contains a DACR, the AS MUST validate the delegate's
+   signature before processing the ACR.  If the signature does not
+   validate, the AS MUST return HTTP status code 403 ("Forbidden").
+
+   The AS MUST verify the ACR for the presence of at least one
+   webSSOResource extension and for exactly one webSSOResourceChain
+   extension.  Futher, the AS MUST verify that the names specified in
+   the webSSOResource extensions refer to certificates in the
+   webSSOResourceChain extension.  If any of these verifications fail,
+   the AS MUST return HTTP status code 400 ("Bad Request").  Finally,
+   the AS MUST validate the certificate chain contained in the
+   webSSOResourceChain extension.  If this validation fails, the AS MUST
+   return the HTTP status code 403 ("Forbidden").
+
+   The AS MAY validate any other field or extension of the ACR and
+   return appropriate HTTP status codes on failure.  However, if during
+   this OPTIONAL validation, a failure occurs due to violation of an AS
+   security policy, the AS MUST return HTTP status code 403
+   ("Forbidden").
+
+   Once the ACR has passed validation, an AC will be generated.  The AC
+   MUST NOT contain the webSSOResourceChain extension.  However, The AC
+   MUST contain all the webSSOResource extensions copied from the ACR.
+   The AS MAY choose to copy any data from the ACR into the AC.
+   Conversely, the AS MAY choose to generate any additional AC data from
+   scratch or from an internal database and ignore the data contained in
+   the ACR.  However, the AS MUST NOT copy any data into the AC from the
+   ACR which it cannot internally validate since the resulting AC
+   represents the canonical information about the user.
+
+   If the request contained a DACR, then the Subject field of the
+   delegate certificate MUST be copied into a webSSODelegate extension
+   in the AC.
+
+   If the AC issued by the AS has a lifespan of more than 24 hours, the
+   AC MUST include any information required to validate revocation,
+   either as a cRLDistributionPoints extension (Section 4.2.1.13 of
+   [RFC5280]) or via OSCP ([RFC2560]).
+
+   Upon success, AS MUST return the AC and its entire signing hierarchy
+
+
+
+McCallum                Expires November 2, 2012               [Page 10]
+
+Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+
+
+   in the body of the response.
+
+   If non-ACGC authentication has been used and the AS is operating in
+   normal mode, the AS SHOULD only issue ACGCs.
+
+4.2.  DELETE Method
+
+   The DELETE method is OPTIONAL.  However, if the AS is configured to
+   permit the creation of ACs with a lifespan of more than 24 hours, the
+   DELETE method MUST be implemented.
+
+   The body of the DELETE request MUST contain zero or more comma-
+   separated AC serial numbers to revoke.  When called, the AS MUST
+   revoke all ACs specified.  However, if a DELETE request contains the
+   serial number of an AC which is owned by another user, the AS MUST
+   return HTTP status code 403 ("Forbidden").  If no serial numbers are
+   specified, the AS MUST revoke all ACs issued for the authenticated
+   user.  A revoked AC MUST appear at the cRLDistributionPoints or OCSP
+   servers within 2 hours.  Immediate update is RECOMMENDED.
+
+4.3.  GET Method
+
+   The GET method is OPTIONAL.
+
+   The GET method takes no input and returns a image file with the logo
+   representing the AS.  Using scalable vector image formats is highly
+   RECOMMENDED.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+McCallum                Expires November 2, 2012               [Page 11]
+
+Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+
+
+5.  webSSO Clients
+
+   A webSSO client is a standard TLS-enabled client that knows how to
+   find and use an AS to obtain an Authentication Certificate.  In a
+   normal TLS negotiation, if a CertificateRequest message is sent to
+   the client, the client will attempt to locate an appropriate
+   certificate, usually by finding matching certificates in a database
+   and/or prompting the user. webSSO is best understood from the client
+   side as an alternative mechanism by which to locate a certificate.
+
+5.1.  Certificate Cache
+
+   The client MUST maintain a cache of all keypairs generated and all
+   certificates obtained.  This cache MAY be accessable to other clients
+   run in the same user session.  However, it RECOMMENDED to avoid
+   writing the cache to long-term storage.  Further, the client MUST NOT
+   write the cache to network based storage.  Failure to comply with
+   this requirement provides opportunity for an unpriviledged user to
+   capture keypairs that travel over the network.
+
+5.2.  Login Process
+
+5.2.1.  Using an Existing AC
+
+   When a CertificateRequest message is received from a PR, the client
+   MUST first attempt to use a pre-existing AC from the cache.  A pre-
+   existing AC is matched from the cache using the following criteria.
+   First, the rules defined by Section 7.4.4 of [RFC6170] must be
+   followed.  Second, the AC MUST have the PR's certificiate, or one of
+   the PR's parent certificates, in one of the AC's webSSOResource
+   extensions' cert field.
+
+   If a matching, non-expired AC is found, it SHOULD be automatically
+   provided to the PR.  In this case no further work is required and the
+   user SHOULD NOT be prompted.  In the case where multiple matching,
+   non-expired ACs are found, the client MUST choose the one with the
+   most recent notBefore time.
+
+5.2.2.  Choosing an AS
+
+   If no matching, non-expired AC was found in the cache, the client
+   will need to make a decision about which AS to use to obtain an AC
+   or, alternatively, which traditional client certificate to use.  This
+   decision can in some cases be made automatically.  However, in most
+   cases the user will be prompted.
+
+
+
+
+
+
+McCallum                Expires November 2, 2012               [Page 12]
+
+Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+
+
+5.2.2.1.  Automatically Choosing an AS
+
+   There are two cases in which an AS can be selected automatically and
+   the user SHOULD NOT be prompted.
+
+   First, if a matching, expired AC is found in the cache, the client
+   SHOULD use the AS specified in the AC's webSSOAS Issuer attribute.
+   In the case where multiple matching, expired ACs are found, the
+   client MUST choose the one with the most recent notBefore time.
+
+   Second, if the PR presents only one certificate authority in the
+   CertificateRequest message and this one certificate authority has the
+   webSSOAS attribute, the client SHOULD use the AS specified in this
+   attribute.
+
+5.2.2.2.  Manually Choosing an AS
+
+   If an AS cannot be chosen automatically, then the client SHOULD
+   prompt the user identify which AS should be used.
+
+5.2.2.2.1.  By Username
+
+   The client MUST support specifying AS by username.  In this case the
+   user will be prompted to enter his username in the format of an email
+   address.  The client then MUST perform a DNS TXT record query on the
+   domain name portion of the username prepended by _websso.  The result
+   of this query is the ASURL to use to authenticate the user.
+
+   For example, to authenticate the user michelle@example.com, the
+   client uses the AS specified in the _websso.example.com TXT record.
+
+5.2.2.2.2.  By ACGC
+
+   The client SHOULD list the ACGCs in the cache which match the
+   criteria specified in section 7.4.4 of [RFC6170] since these ACGCs
+   can be used to obtain a new AC without requiring new credentials.
+   The client may display any information in the Subject or Issuer
+   fields of the ACGC.  Specifically, displaying images embedded in the
+   ACGC is RECOMMENDED.  Further, the client MAY superimpose the AS logo
+   (obtained from the ASURL) on top of the certificate image so long as
+   the certificate image is not obscured.
+
+5.2.2.2.3.  By Certificate Authorities
+
+   The client SHOULD list the ASs referenced by the webSSOAS attributes
+   found in the certificate authorities section of the
+   CertificateRequest message as suggested ASs to use.  The client MAY
+   display any information from the certificate authorities
+
+
+
+McCallum                Expires November 2, 2012               [Page 13]
+
+Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+
+
+   DistinguishedNames.  Specifically, displaying the AS logo referenced
+   by the webSSOAS attribute is RECOMMENDED.
+
+5.2.2.2.4.  By ASURL
+
+   The client MAY permit the user to enter an ASURL manually.
+
+5.2.2.2.5.  Traditional Client Certificates
+
+   Since webSSO maintains compatibility with traditional client
+   certificates, webSSO client SHOULD display matching traditional
+   client certificates in a manner similar to ACGCs, since both can be
+   selected to provide authentication without requiring any further
+   credentials.
+
+5.2.3.  Generating the ACR
+
+   Once the AS is chosen the client MUST generate a new keypair.  Using
+   the public key from the new keypair, the client MUST generate a new
+   ACR.
+
+   If the client does not yet have the username of the user, it SHOULD
+   prompt the user at this time.  The username MUST be converted to the
+   attribute notation (UID/DC format) and inserted into the Subject
+   field of the ACR.
+
+   Next, the client MUST create the webSSOResourceChain extension in the
+   ACR containing the full certificate chain of the PR.
+
+   Next, the client MUST create a webSSOResource extension containing
+   the Subject of the PR's certificate.  If the PR's certificate
+   contains any webSSOResource extensions and the Names they contain are
+   present in the PR's certificate signing hierarchy, they SHOULD be
+   copied into the ACR.  The client MUST NOT copy a Name from the PR
+   certificate's webSSOResource extension into the ACR if it does not
+   exist in the PR's certificate hierarchy.
+
+   The client MAY specify any other information in the ACR.  This
+   information is a hint only, and the AS MAY reject information it
+   deems unacceptable.
+
+5.2.4.  Obtaining a New AC
+
+   Now that the client has the AS, it MUST connect to the AS.  If the AS
+   is not encrypted by TLS, the client MUST NOT use the AS.  Futher, if
+   the certificate used by the AS to encrypt the connection is not
+   trusted by the client, the client MUST NOT use the AS.
+
+
+
+
+McCallum                Expires November 2, 2012               [Page 14]
+
+Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+
+
+   Since the AS it itself a PR, it will send the CertficateRequest
+   message as part of the connection process.  If the client possesses
+   an ACGC for this PR, it should automatically provide the ACGC.
+   Otherwise, it should attempt to conclude negotiation without a client
+   certificate.  If this negotiation fails, the client MUST reconnect
+   and attempt to find a suitable certificate using the webSSO
+   methodology recursively.
+
+   If an ACGC or other certificate (either webSSO or traditoinal) is
+   provided to the AS and the connection is established, the client MUST
+   POST the ACR to the AS.  If this suceeds without HTTP authentication,
+   then the certificate authentication was sufficient to grant an AC.
+   In this case, the client's task is complete and the resulting AC can
+   be provided back to the original PR.
+
+   However, if the client is presented with HTTP authentication, then
+   the client MUST attempt to first obtain an ACGC.  Thus, the client
+   MUST then generate a second ACR for the ACGC (see Section 5.2.3).
+   The client MUST submit this ACR for all future POSTs until the ACGC
+   is obtained.  Once the ACGC is obtained, the client MUST use the ACGC
+   to submit the original ACR.
+
+   Also when presented with HTTP authentication, if the client prompts
+   the user to enter credentials, if the current connection was
+   established without a client certificate (webSSO or traditional), the
+   prompt for HTTP credentials SHOULD offer traditional client
+   certificate authentication as a secondary option.  If the traditional
+   client certificate option is chosen, the client MUST then renegotiate
+   TLS, providing the client certificate selected.  If the AS still
+   prompts for the use of HTTP authentication, the client SHOULD prompt
+   the user for this information again, but exclude the client
+   certificate option since a client certificate was already selected.
+   This is to allow for the case of using a traditional client
+   certificate to obtain a webSSO ACGC.
+
+   Once an ACGC is obtained, the client MUST renegotiate the TLS
+   connection, providing the ACGC, and POST the original ACR, obtaining
+   an AC for the PR.
+
+
+
+
+
+
+
+
+
+
+
+
+
+McCallum                Expires November 2, 2012               [Page 15]
+
+Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+
+
+6.  Security Considerations
+
+   Since webSSO relies heavily on existing standards, the security
+   considerations from those standards are applicable when they are
+   used.  This is most specifically TLS Client Authentication and HTTP
+   Authentication.
+
+   The most important consideration is that each of the parties in the
+   transaction are validated via standard certificate validation (and
+   webSSO extended validation in the case of a PR).  The client verifies
+   the PR and AS by ensuring their certificates are valid and trusted.
+   When processing a DACR, the delegate is verified as well via the
+   webSSODelegate extension.  The AS verifies the client via either HTTP
+   Authentication or TLS Client Certificate Authentication.  The AS also
+   verifies the PR and delegate via the webSSOResource and the
+   webSSODelegate extensions, respectively.  The PR establishes a trust
+   with a given AS by a manual setup process, which may or may not
+   involve a third-party Certificate Authority.  Once this trust is
+   established, the user trusts ACs issued by the AS.  Further, the PR
+   may also validate the delegate via the webSSODelegate extension.  The
+   end result is that all parties have been verified in every
+   transaction.
+
+   One specific problem that may arise is where a PR trusts either a
+   public certificate authority or multiple private certificates from
+   third parties.  In this case, two parties can issue a certificate to
+   the PR for the same domain, allowing one to impersonate the other.
+   Mitigation of this problem is provided by using the standard
+   nameConstraints extension.
+
+   In order to limit the exposure in the case of a compromised AC, AC's
+   are always generated to a specific PR.  This prevents a certificate
+   issued for one service to be used for other services, and most
+   specifically prevents a normal AC from being used as an ACGC to
+   obtain further certificates.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+McCallum                Expires November 2, 2012               [Page 16]
+
+Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+
+
+7.  IANA Considerations
+
+   This section needs to be filled in once standard OIDs are selected
+   for the webSSO attributes and extensions.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+McCallum                Expires November 2, 2012               [Page 17]
+
+Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+
+
+8.  References
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", RFC 2119, March 1997.
+
+   [RFC2560]  Myers, M., Ankney, R., Malpani, A., Galperin, S., and C.
+              Adams, "X.509 Internet Public Key Infrastructure Online
+              Certificate Status Protocol - OCSP", RFC 2560, June 1999.
+
+   [RFC2616]  Fielding, R., Gettys, J., Mogul, J., Frystk, H., Masinter,
+              L., Leach, P., and T. Berners-Lee, "Hypertext Transfer
+              Protocol -- HTTP/1.1", RFC 2616, June 1999.
+
+   [RFC2986]  Nystrom, M. and B. Kaliski, "PKCS #10: Certification
+              Request Syntax Specification - Version 1.7", RFC 2986,
+              November 2000.
+
+   [RFC4514]  Zeilenga, K., "Lightweight Directory Access Protocol
+              (LDAP): String Representation of Distinguished Names",
+              RFC 4514, June 2006.
+
+   [RFC4519]  Sciberras, A., "Lightweight Directory Access Protocol
+              (LDAP): Schema for User Applications", RFC 4519,
+              June 2006.
+
+   [RFC5246]  Dierks, T. and E. Rescorla, "The Transport Layer Security
+              (TLS) Protocol - Version 1.2", RFC 5246, August 2008.
+
+   [RFC5280]  Cooper, D., Santesson, S., Farrell, S., Boeyen, S.,
+              Housley, R., and W. Polk, "Internet X.509 Public Key
+              Infrastructure Certificate and Certificate Revocation List
+              (CRL) Profile", RFC 5280, May 2008.
+
+   [RFC5322]  Resnick, P., "Internet Message Format", RFC 5322,
+              October 2008.
+
+   [RFC5652]  Housley, R., "Cryptographic Message Syntax (CMS)",
+              RFC 5652, September 2009.
+
+   [RFC6170]  Santesson, S., Housley, R., Bajaj, S., and L. Rosenthol,
+              "Internet X.509 Public Key Infrastructure -- Certificate
+              Image", RFC 6170, May 2011.
+
+   [X.501]    CCITT, "Recommendation X.501: The Directory - Models",
+              1988.
+
+
+
+
+
+
+McCallum                Expires November 2, 2012               [Page 18]
+
+Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+
+
+Author's Address
+
+   Nathaniel P. McCallum
+   Red Hat, Inc.
+   1801 Varsity Drive
+   Raleigh, NC  27606
+   US
+
+   Phone: +1 404 842 5022
+   Email: npmccallum@redhat.com
+   URI:   http://www.redhat.com/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+McCallum                Expires November 2, 2012               [Page 19]
+
+Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+
+
+Full Copyright Statement
+
+   Copyright (C) The IETF Trust (2012).
+
+   This document is subject to the rights, licenses and restrictions
+   contained in BCP 78, and except as set forth therein, the authors
+   retain all their rights.
+
+   This document and the information contained herein are provided on an
+   "AS IS" basis and THE CONTRIBUTOR, THE ORGANIZATION HE/SHE REPRESENTS
+   OR IS SPONSORED BY (IF ANY), THE INTERNET SOCIETY, THE IETF TRUST AND
+   THE INTERNET ENGINEERING TASK FORCE DISCLAIM ALL WARRANTIES, EXPRESS
+   OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTY THAT THE USE OF
+   THE INFORMATION HEREIN WILL NOT INFRINGE ANY RIGHTS OR ANY IMPLIED
+   WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
+
+
+Intellectual Property
+
+   The IETF takes no position regarding the validity or scope of any
+   Intellectual Property Rights or other rights that might be claimed to
+   pertain to the implementation or use of the technology described in
+   this document or the extent to which any license under such rights
+   might or might not be available; nor does it represent that it has
+   made any independent effort to identify any such rights.  Information
+   on the procedures with respect to rights in RFC documents can be
+   found in BCP 78 and BCP 79.
+
+   Copies of IPR disclosures made to the IETF Secretariat and any
+   assurances of licenses to be made available, or the result of an
+   attempt made to obtain a general license or permission for the use of
+   such proprietary rights by implementers or users of this
+   specification can be obtained from the IETF on-line IPR repository at
+   http://www.ietf.org/ipr.
+
+   The IETF invites any interested party to bring to its attention any
+   copyrights, patents or patent applications, or other proprietary
+   rights that may cover technology that may be required to implement
+   this standard.  Please address the information to the IETF at
+   ietf-ipr@ietf.org.
+
+
+
+
+
+
+
+
+
+
+
+McCallum                Expires November 2, 2012               [Page 20]
+
