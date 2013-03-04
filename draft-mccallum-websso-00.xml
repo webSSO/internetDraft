@@ -26,7 +26,7 @@
       </address>
     </author>
 
-    <date month="May" year="2012" />
+    <date month="March" year="2013" />
 
     <area>Security</area>
     <keyword>I-D</keyword>
@@ -123,8 +123,9 @@
       <section anchor="distinguishednames" title="Distinguished Names">
         <section anchor="webssoas" title="webSSOAS Attribute">
           <t>The webSSOAS attribute is a Subject/Issuer attribute with the OID
-             TBD. It is a UTF8String which contains an ASURL. A Subject or
-             Issuer field MUST NOT contain more than one webSSOAS attribute.</t>
+             1.3.6.1.4.1.2312.10.1. It is a UTF8String which contains an ASURL.
+             A Subject or Issuer field MUST NOT contain more than one webSSOAS
+             attribute.</t>
              
           <t>Any certificate used to sign AC's by an AS MUST contain the
              webSSOAS attribute in its Subject field.</t>
@@ -161,10 +162,10 @@
         <section anchor="webssoresource" title="webSSOResource Extension">
           <t>The webSSOResource extension is an X.509 certificate extension of
              the X.501 (<xref target="X.501"/>) Name type and with an OID of
-             TBD. This extension is used in an AC to identify which PR the AC
-             was issued for. An AC MUST contain one or more webSSOResource
-             extensions. An ACR also MUST contain one or more webSSOResource
-             extensions.</t>
+             1.3.6.1.4.1.2312.10.2. This extension is used in an AC to identify
+             which PR the AC was issued for. An AC MUST contain one or more
+             webSSOResource extensions. An ACR also MUST contain one or more
+             webSSOResource extensions.</t>
           
           <t>The extension MUST be marked as critical.</t>
         </section>
@@ -172,9 +173,9 @@
         <section anchor="webssodelegate" title="webSSODelegate Extension">
           <t>The webSSODelegate extension is an X.509 certificate extension of
              the X.501 (<xref target="X.501"/>) Name type and with an OID of
-             TBD. This extension is used in an AC to identify which delegate
-             the AC was issued to. An AC MUST NOT contain more than one
-             webSSODelegate extension.</t>
+             1.3.6.1.4.1.2312.10.3. This extension is used in an AC to identify
+             which delegate the AC was issued to. An AC MUST NOT contain more
+             than one webSSODelegate extension.</t>
              
           <t>The extension, when present, MUST be marked as critical.</t>
         </section>
@@ -182,11 +183,11 @@
         <section anchor="webssoresourcechain"
                  title="webSSOResourceChain Extension">
           <t>The webSSOResourceChain extension is an X.509 certificate
-             extension of the webSSOIdentity type and with an OID of TBD. The
-             extension is used in the ACR to pass the certificate chain of
-             the PR from the client to the AS for verification. An ACR MUST
-             contain exactly one webSSOResourceChain extension. The
-             webSSOIdentity type is defined as:</t>
+             extension of the webSSOIdentity type and with an OID of
+             1.3.6.1.4.1.2312.10.4. The extension is used in the ACR to pass
+             the certificate chain of the PR from the client to the AS for
+             verification. An ACR MUST contain exactly one webSSOResourceChain
+             extension. The webSSOIdentity type is defined as:</t>
              
           <t>webSSOIdentity ::= SEQUENCE {
                cert  [0] EXPLICIT Certificate,

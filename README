@@ -3,8 +3,8 @@
 
 Network Working Group                                        N. McCallum
 Internet-Draft                                             Red Hat, Inc.
-Intended status: Standards Track                                May 2012
-Expires: November 2, 2012
+Intended status: Standards Track                           March 4, 2013
+Expires: September 5, 2013
 
 
                       Web Single Sign-On (webSSO)
@@ -34,7 +34,7 @@ Status of this Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on November 2, 2012.
+   This Internet-Draft will expire on September 5, 2013.
 
 
 
@@ -52,9 +52,9 @@ Status of this Memo
 
 
 
-McCallum                Expires November 2, 2012                [Page 1]
+McCallum                Expires September 5, 2013               [Page 1]
 
-Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+Internet-Draft         Web Single Sign-On (webSSO)            March 2013
 
 
 Table of Contents
@@ -108,9 +108,9 @@ Table of Contents
 
 
 
-McCallum                Expires November 2, 2012                [Page 2]
+McCallum                Expires September 5, 2013               [Page 2]
 
-Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+Internet-Draft         Web Single Sign-On (webSSO)            March 2013
 
 
 1.  Introduction
@@ -164,9 +164,9 @@ Internet-Draft         Web Single Sign-On (webSSO)              May 2012
 
 
 
-McCallum                Expires November 2, 2012                [Page 3]
+McCallum                Expires September 5, 2013               [Page 3]
 
-Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+Internet-Draft         Web Single Sign-On (webSSO)            March 2013
 
 
    Delegate Authentication Certification Request (DACR):  An ACR wrapped
@@ -220,9 +220,9 @@ Internet-Draft         Web Single Sign-On (webSSO)              May 2012
 
 
 
-McCallum                Expires November 2, 2012                [Page 4]
+McCallum                Expires September 5, 2013               [Page 4]
 
-Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+Internet-Draft         Web Single Sign-On (webSSO)            March 2013
 
 
 2.  Formatting
@@ -232,8 +232,9 @@ Internet-Draft         Web Single Sign-On (webSSO)              May 2012
 2.1.1.  webSSOAS Attribute
 
    The webSSOAS attribute is a Subject/Issuer attribute with the OID
-   TBD.  It is a UTF8String which contains an ASURL.  A Subject or
-   Issuer field MUST NOT contain more than one webSSOAS attribute.
+   1.3.6.1.4.1.2312.10.1.  It is a UTF8String which contains an ASURL.
+   A Subject or Issuer field MUST NOT contain more than one webSSOAS
+   attribute.
 
    Any certificate used to sign AC's by an AS MUST contain the webSSOAS
    attribute in its Subject field.
@@ -266,38 +267,40 @@ Internet-Draft         Web Single Sign-On (webSSO)              May 2012
 2.3.1.  webSSOResource Extension
 
    The webSSOResource extension is an X.509 certificate extension of the
-   X.501 ([X.501]) Name type and with an OID of TBD.  This extension is
-   used in an AC to identify which PR the AC was issued for.  An AC MUST
-   contain one or more webSSOResource extensions.  An ACR also MUST
-   contain one or more webSSOResource extensions.
+   X.501 ([X.501]) Name type and with an OID of 1.3.6.1.4.1.2312.10.2.
+   This extension is used in an AC to identify which PR the AC was
+   issued for.  An AC MUST contain one or more webSSOResource
+   extensions.  An ACR also MUST contain one or more webSSOResource
+   extensions.
+
+
+
+
+McCallum                Expires September 5, 2013               [Page 5]
+
+Internet-Draft         Web Single Sign-On (webSSO)            March 2013
+
 
    The extension MUST be marked as critical.
-
-
-
-
-McCallum                Expires November 2, 2012                [Page 5]
-
-Internet-Draft         Web Single Sign-On (webSSO)              May 2012
-
 
 2.3.2.  webSSODelegate Extension
 
    The webSSODelegate extension is an X.509 certificate extension of the
-   X.501 ([X.501]) Name type and with an OID of TBD.  This extension is
-   used in an AC to identify which delegate the AC was issued to.  An AC
-   MUST NOT contain more than one webSSODelegate extension.
+   X.501 ([X.501]) Name type and with an OID of 1.3.6.1.4.1.2312.10.3.
+   This extension is used in an AC to identify which delegate the AC was
+   issued to.  An AC MUST NOT contain more than one webSSODelegate
+   extension.
 
    The extension, when present, MUST be marked as critical.
 
 2.3.3.  webSSOResourceChain Extension
 
    The webSSOResourceChain extension is an X.509 certificate extension
-   of the webSSOIdentity type and with an OID of TBD.  The extension is
-   used in the ACR to pass the certificate chain of the PR from the
-   client to the AS for verification.  An ACR MUST contain exactly one
-   webSSOResourceChain extension.  The webSSOIdentity type is defined
-   as:
+   of the webSSOIdentity type and with an OID of 1.3.6.1.4.1.2312.10.4.
+   The extension is used in the ACR to pass the certificate chain of the
+   PR from the client to the AS for verification.  An ACR MUST contain
+   exactly one webSSOResourceChain extension.  The webSSOIdentity type
+   is defined as:
 
    webSSOIdentity ::= SEQUENCE { cert [0] EXPLICIT Certificate, chain
    [1] EXPLICIT SEQUENCE OF Certificate OPTIONAL }
@@ -329,12 +332,9 @@ Internet-Draft         Web Single Sign-On (webSSO)              May 2012
 
 
 
-
-
-
-McCallum                Expires November 2, 2012                [Page 6]
+McCallum                Expires September 5, 2013               [Page 6]
 
-Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+Internet-Draft         Web Single Sign-On (webSSO)            March 2013
 
 
 3.  Protected Resource
@@ -388,9 +388,9 @@ Internet-Draft         Web Single Sign-On (webSSO)              May 2012
 
 
 
-McCallum                Expires November 2, 2012                [Page 7]
+McCallum                Expires September 5, 2013               [Page 7]
 
-Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+Internet-Draft         Web Single Sign-On (webSSO)            March 2013
 
 
 3.1.3.  Revocation Validation
@@ -444,9 +444,9 @@ Internet-Draft         Web Single Sign-On (webSSO)              May 2012
 
 
 
-McCallum                Expires November 2, 2012                [Page 8]
+McCallum                Expires September 5, 2013               [Page 8]
 
-Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+Internet-Draft         Web Single Sign-On (webSSO)            March 2013
 
 
 4.  Authentication Service
@@ -500,9 +500,9 @@ Internet-Draft         Web Single Sign-On (webSSO)              May 2012
 
 
 
-McCallum                Expires November 2, 2012                [Page 9]
+McCallum                Expires September 5, 2013               [Page 9]
 
-Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+Internet-Draft         Web Single Sign-On (webSSO)            March 2013
 
 
    type is presented in the Content-Type HTTP header, the server MUST
@@ -556,9 +556,9 @@ Internet-Draft         Web Single Sign-On (webSSO)              May 2012
 
 
 
-McCallum                Expires November 2, 2012               [Page 10]
+McCallum                Expires September 5, 2013              [Page 10]
 
-Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+Internet-Draft         Web Single Sign-On (webSSO)            March 2013
 
 
    in the body of the response.
@@ -612,9 +612,9 @@ Internet-Draft         Web Single Sign-On (webSSO)              May 2012
 
 
 
-McCallum                Expires November 2, 2012               [Page 11]
+McCallum                Expires September 5, 2013              [Page 11]
 
-Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+Internet-Draft         Web Single Sign-On (webSSO)            March 2013
 
 
 5.  webSSO Clients
@@ -668,9 +668,9 @@ Internet-Draft         Web Single Sign-On (webSSO)              May 2012
 
 
 
-McCallum                Expires November 2, 2012               [Page 12]
+McCallum                Expires September 5, 2013              [Page 12]
 
-Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+Internet-Draft         Web Single Sign-On (webSSO)            March 2013
 
 
 5.2.2.1.  Automatically Choosing an AS
@@ -724,9 +724,9 @@ Internet-Draft         Web Single Sign-On (webSSO)              May 2012
 
 
 
-McCallum                Expires November 2, 2012               [Page 13]
+McCallum                Expires September 5, 2013              [Page 13]
 
-Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+Internet-Draft         Web Single Sign-On (webSSO)            March 2013
 
 
    DistinguishedNames.  Specifically, displaying the AS logo referenced
@@ -780,9 +780,9 @@ Internet-Draft         Web Single Sign-On (webSSO)              May 2012
 
 
 
-McCallum                Expires November 2, 2012               [Page 14]
+McCallum                Expires September 5, 2013              [Page 14]
 
-Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+Internet-Draft         Web Single Sign-On (webSSO)            March 2013
 
 
    Since the AS it itself a PR, it will send the CertficateRequest
@@ -836,9 +836,9 @@ Internet-Draft         Web Single Sign-On (webSSO)              May 2012
 
 
 
-McCallum                Expires November 2, 2012               [Page 15]
+McCallum                Expires September 5, 2013              [Page 15]
 
-Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+Internet-Draft         Web Single Sign-On (webSSO)            March 2013
 
 
 6.  Security Considerations
@@ -892,9 +892,9 @@ Internet-Draft         Web Single Sign-On (webSSO)              May 2012
 
 
 
-McCallum                Expires November 2, 2012               [Page 16]
+McCallum                Expires September 5, 2013              [Page 16]
 
-Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+Internet-Draft         Web Single Sign-On (webSSO)            March 2013
 
 
 7.  IANA Considerations
@@ -948,9 +948,9 @@ Internet-Draft         Web Single Sign-On (webSSO)              May 2012
 
 
 
-McCallum                Expires November 2, 2012               [Page 17]
+McCallum                Expires September 5, 2013              [Page 17]
 
-Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+Internet-Draft         Web Single Sign-On (webSSO)            March 2013
 
 
 8.  References
@@ -1004,9 +1004,9 @@ Internet-Draft         Web Single Sign-On (webSSO)              May 2012
 
 
 
-McCallum                Expires November 2, 2012               [Page 18]
+McCallum                Expires September 5, 2013              [Page 18]
 
-Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+Internet-Draft         Web Single Sign-On (webSSO)            March 2013
 
 
 Author's Address
@@ -1060,14 +1060,14 @@ Author's Address
 
 
 
-McCallum                Expires November 2, 2012               [Page 19]
+McCallum                Expires September 5, 2013              [Page 19]
 
-Internet-Draft         Web Single Sign-On (webSSO)              May 2012
+Internet-Draft         Web Single Sign-On (webSSO)            March 2013
 
 
 Full Copyright Statement
 
-   Copyright (C) The IETF Trust (2012).
+   Copyright (C) The IETF Trust (2013).
 
    This document is subject to the rights, licenses and restrictions
    contained in BCP 78, and except as set forth therein, the authors
@@ -1116,5 +1116,5 @@ Intellectual Property
 
 
 
-McCallum                Expires November 2, 2012               [Page 20]
+McCallum                Expires September 5, 2013              [Page 20]
 
